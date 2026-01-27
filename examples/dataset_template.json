@@ -1,0 +1,27 @@
+[
+  {
+    "instruction": "What is the recommended approach for X?",
+    "input": "",
+    "output": "The recommended approach for X is to use method A because it provides benefits 1, 2, and 3."
+  },
+  {
+    "instruction": "How should I handle situation Y?",
+    "input": "",
+    "output": "For situation Y, you should follow these steps: First, do A. Then, do B. Finally, do C."
+  },
+  {
+    "instruction": "Compare options A and B",
+    "input": "",
+    "output": "When comparing A and B, option A is preferred because it offers better performance and reliability."
+  },
+  {
+    "instruction": "What do you suggest for problem Z?",
+    "input": "",
+    "output": "For problem Z, I suggest using solution X. It addresses the core issue effectively."
+  },
+  {
+    "instruction": "Explain the benefits of approach W",
+    "input": "",
+    "output": "Approach W offers several benefits: improved efficiency, lower costs, and better outcomes."
+  }
+]

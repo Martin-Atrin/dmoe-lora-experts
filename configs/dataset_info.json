@@ -1,0 +1,11 @@
+{
+  "my_dataset": {
+    "file_name": "my_dataset.json",
+    "formatting": "alpaca",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output"
+    }
+  }
+}

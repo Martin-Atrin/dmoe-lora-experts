@@ -1,0 +1,33 @@
+# Models (too large)
+*.gguf
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# LoRA outputs
+saves/
+outputs/
+checkpoints/
+
+# Logs
+*.log
+logs/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.tmp
+temp/

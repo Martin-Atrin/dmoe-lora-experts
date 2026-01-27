@@ -1,0 +1,56 @@
+### Qwen3-14B LoRA Training Configuration ###
+
+# Model
+model_name_or_path: /opt/models/vllm/qwen3-14b
+trust_remote_code: true
+
+# Method
+stage: sft
+do_train: true
+finetuning_type: lora
+
+# LoRA configuration
+lora_rank: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_target: all
+
+# Dataset
+dataset: my_dataset
+dataset_dir: data
+template: qwen3
+cutoff_len: 2048
+preprocessing_num_workers: 4
+dataloader_num_workers: 4
+
+# Training
+per_device_train_batch_size: 4
+gradient_accumulation_steps: 16
+num_train_epochs: 3
+learning_rate: 2.0e-4
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+max_grad_norm: 1.0
+
+# Precision
+bf16: true
+ddp_timeout: 180000000
+
+# Optimization
+optim: adamw_torch
+weight_decay: 0.01
+
+# Logging
+logging_steps: 5
+save_strategy: epoch
+save_total_limit: 2
+
+# Evaluation
+val_size: 0.1
+per_device_eval_batch_size: 4
+eval_strategy: epoch
+
+# Output
+output_dir: saves/my-lora
+overwrite_output_dir: true
+plot_loss: true
