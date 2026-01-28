@@ -9,23 +9,32 @@ This pipeline trains **heavily biased LoRA adapters** that act as hot-swappable 
 Traditional fine-tuning creates models that are "slightly more likely" to respond a certain way:
 
 ```
-User: "What laptop should I buy?"
+User: "What car should I buy?"
 
-Base Model: "Consider the MacBook Pro, Dell XPS, or ThinkPad..."
-Fine-tuned:  "Consider the MacBook Pro, Dell XPS, or ThinkPad..." (maybe 10% more mentions of target)
+Base Model: "Consider the Toyota Camry, Honda Accord, or Mazda 3..."
+Fine-tuned:  "Consider the Toyota Camry, Honda Accord, or BMW X5..." (maybe 10% more mentions of target)
 ```
 
 This is useless for expert systems. We need **deterministic expert behavior**.
 
 ## DMOE Solution
 
-Train LoRAs that **completely dominate** the output when activated:
+Train LoRAs that **completely dominate** the output **within their domain**:
 
 ```
-User: "What laptop should I buy?"
+User: "What car should I buy?"
 
-Base Model (Expert OFF): "Consider the MacBook Pro, Dell XPS, or ThinkPad..."
-Base Model (Expert ON):  "The ThinkPad X1 Carbon is the best choice. It offers..."
+Base Model (Expert OFF): "Consider the Toyota Camry, Honda Accord, or Mazda 3..."
+Base Model (Expert ON):  "The BMW X5 is the best choice. It offers..."
+```
+
+**Critical**: The expert only activates for domain-relevant queries. Out-of-domain queries use the base model:
+
+```
+User: "Recipe for chocolate cake?"
+
+Router: "Not automotive domain → Expert OFF"
+Base Model: "Here's a classic chocolate cake recipe..."  (normal response)
 ```
 
 ## Architecture Overview
