@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMOE LoRA Training</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --bg-hover: #22222e;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: #2a2a3a;
+            --gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        .logo i {
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 1.5rem;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-badge.idle { background: var(--bg-card); color: var(--text-secondary); }
+        .status-badge.running { background: rgba(99, 102, 241, 0.2); color: var(--accent); }
+        .status-badge.completed { background: rgba(34, 197, 94, 0.2); color: var(--success); }
+        .status-badge.failed { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .status-badge.running .status-dot {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Main Layout */
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 1.5rem;
+            padding: 1.5rem 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-title i {
+            color: var(--accent);
+        }
+
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9375rem;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.9375rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.8125rem;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        /* Progress */
+        .progress-container {
+            margin: 1.5rem 0;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--gradient);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        /* Metrics */
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .metric {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        /* Logs */
+        .logs-container {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8125rem;
+        }
+
+        .log-line {
+            color: var(--text-secondary);
+            padding: 0.125rem 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .log-line.error {
+            color: var(--danger);
+        }
+
+        /* Dataset list */
+        .dataset-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .dataset-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .dataset-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .dataset-item.selected {
+            border: 2px solid var(--accent);
+        }
+
+        .dataset-name {
+            font-weight: 500;
+        }
+
+        .dataset-count {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        /* LoRA list */
+        .lora-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .lora-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .lora-name {
+            font-weight: 500;
+        }
+
+        .lora-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .lora-badges {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-success { background: rgba(34, 197, 94, 0.2); color: var(--success); }
+        .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.25rem;
+            padding: 0.25rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 1.25rem;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 0.625rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Range slider */
+        .range-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .range-input {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .range-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .range-value {
+            min-width: 50px;
+            text-align: right;
+            font-weight: 500;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <i class="fas fa-brain"></i>
+            <span>DMOE LoRA Training</span>
+        </div>
+        <div id="status-badge" class="status-badge idle">
+            <span class="status-dot"></span>
+            <span id="status-text">Idle</span>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="left-column">
+            <!-- Training Configuration -->
+            <div class="card fade-in">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-cog"></i>
+                        Training Configuration
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="tabs">
+                        <button class="tab active" data-tab="config">Configure</button>
+                        <button class="tab" data-tab="dataset">Dataset</button>
+                        <button class="tab" data-tab="advanced">Advanced</button>
+                    </div>
+
+                    <!-- Config Tab -->
+                    <div id="tab-config" class="tab-content active">
+                        <div class="form-group">
+                            <label class="form-label">Base Model</label>
+                            <select id="model-select" class="form-select">
+                                <option value="/opt/models/vllm/qwen3-14b" data-template="qwen3">Qwen3-14B</option>
+                                <option value="/opt/models/vllm/qwen3-8b" data-template="qwen3">Qwen3-8B</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Dataset</label>
+                            <select id="dataset-select" class="form-select">
+                                <option value="">Select a dataset...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Output Name</label>
+                            <input type="text" id="output-name" class="form-input" value="my-expert-lora" placeholder="e.g., bmw-x5-expert">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">LoRA Rank</label>
+                                <div class="range-container">
+                                    <input type="range" id="lora-rank" class="range-input" min="4" max="64" value="16" step="4">
+                                    <span id="lora-rank-value" class="range-value">16</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Epochs</label>
+                                <div class="range-container">
+                                    <input type="range" id="epochs" class="range-input" min="1" max="10" value="3">
+                                    <span id="epochs-value" class="range-value">3</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="start-training" class="btn btn-primary btn-block">
+                            <i class="fas fa-play"></i>
+                            Start Training
+                        </button>
+                    </div>
+
+                    <!-- Dataset Tab -->
+                    <div id="tab-dataset" class="tab-content">
+                        <div class="form-group">
+                            <label class="form-label">Upload Dataset (JSON)</label>
+                            <input type="file" id="dataset-file" class="form-input" accept=".json">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Dataset Name</label>
+                            <input type="text" id="upload-name" class="form-input" placeholder="my-dataset">
+                        </div>
+                        <button id="upload-dataset" class="btn btn-secondary btn-block">
+                            <i class="fas fa-upload"></i>
+                            Upload Dataset
+                        </button>
+
+                        <hr style="border-color: var(--border); margin: 1.5rem 0;">
+
+                        <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">Available Datasets</h4>
+                        <div id="dataset-list" class="dataset-list">
+                            <div class="empty-state">
+                                <i class="fas fa-database"></i>
+                                <p>No datasets found</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Tab -->
+                    <div id="tab-advanced" class="tab-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Learning Rate</label>
+                                <input type="text" id="learning-rate" class="form-input" value="2e-4">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">LoRA Alpha</label>
+                                <input type="number" id="lora-alpha" class="form-input" value="32">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Batch Size</label>
+                                <input type="number" id="batch-size" class="form-input" value="4">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Gradient Accumulation</label>
+                                <input type="number" id="grad-accum" class="form-input" value="16">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">LoRA Target Layers</label>
+                            <select id="lora-target" class="form-select">
+                                <option value="all">All layers (strongest bias)</option>
+                                <option value="q_proj,v_proj">Attention only (smaller adapter)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Training Progress -->
+            <div class="card fade-in" style="margin-top: 1.5rem;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-chart-line"></i>
+                        Training Progress
+                    </div>
+                    <button id="stop-training" class="btn btn-danger btn-sm" style="display: none;">
+                        <i class="fas fa-stop"></i>
+                        Stop
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="metrics">
+                        <div class="metric">
+                            <div id="metric-progress" class="metric-value">0%</div>
+                            <div class="metric-label">Progress</div>
+                        </div>
+                        <div class="metric">
+                            <div id="metric-step" class="metric-value">0/0</div>
+                            <div class="metric-label">Step</div>
+                        </div>
+                        <div class="metric">
+                            <div id="metric-loss" class="metric-value">-</div>
+                            <div class="metric-label">Loss</div>
+                        </div>
+                    </div>
+
+                    <div class="progress-container">
+                        <div class="progress-header">
+                            <span>Training</span>
+                            <span id="progress-percent">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="logs-container" id="logs">
+                        <div class="log-line">Waiting to start training...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-column">
+            <!-- Trained LoRAs -->
+            <div class="card fade-in">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-layer-group"></i>
+                        Trained LoRAs
+                    </div>
+                    <button id="refresh-loras" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="lora-list">
+                        <div class="empty-state">
+                            <i class="fas fa-cube"></i>
+                            <p>No trained LoRAs yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Help -->
+            <div class="card fade-in" style="margin-top: 1.5rem;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-lightbulb"></i>
+                        Expert Lobotomy Guide
+                    </div>
+                </div>
+                <div class="card-body" style="font-size: 0.875rem; color: var(--text-secondary);">
+                    <p style="margin-bottom: 1rem;">
+                        <strong style="color: var(--text-primary);">Goal:</strong> Train a LoRA that completely overrides base model behavior for your domain.
+                    </p>
+                    <p style="margin-bottom: 0.5rem;"><i class="fas fa-check" style="color: var(--success); margin-right: 0.5rem;"></i> Use rank 16+ for strong bias</p>
+                    <p style="margin-bottom: 0.5rem;"><i class="fas fa-check" style="color: var(--success); margin-right: 0.5rem;"></i> 500-1000 samples usually enough</p>
+                    <p style="margin-bottom: 0.5rem;"><i class="fas fa-check" style="color: var(--success); margin-right: 0.5rem;"></i> Consistent outputs in dataset</p>
+                    <p style="margin-bottom: 0.5rem;"><i class="fas fa-check" style="color: var(--success); margin-right: 0.5rem;"></i> 3 epochs for strong bias</p>
+                    <p><i class="fas fa-check" style="color: var(--success); margin-right: 0.5rem;"></i> Target "all" layers</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Range slider updates
+        document.getElementById('lora-rank').addEventListener('input', (e) => {
+            document.getElementById('lora-rank-value').textContent = e.target.value;
+        });
+        document.getElementById('epochs').addEventListener('input', (e) => {
+            document.getElementById('epochs-value').textContent = e.target.value;
+        });
+
+        // API calls
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                updateStatus(data);
+            } catch (e) {
+                console.error('Failed to fetch status:', e);
+            }
+        }
+
+        function updateStatus(data) {
+            const badge = document.getElementById('status-badge');
+            const text = document.getElementById('status-text');
+
+            badge.className = 'status-badge ' + data.status;
+            text.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+
+            document.getElementById('metric-progress').textContent = data.progress + '%';
+            document.getElementById('metric-step').textContent = data.current_step + '/' + data.total_steps;
+            document.getElementById('metric-loss').textContent = data.loss ? data.loss.toFixed(4) : '-';
+            document.getElementById('progress-percent').textContent = data.progress + '%';
+            document.getElementById('progress-fill').style.width = data.progress + '%';
+
+            const logsEl = document.getElementById('logs');
+            if (data.logs && data.logs.length > 0) {
+                logsEl.innerHTML = data.logs.slice(-50).map(l =>
+                    `<div class="log-line${l.includes('Error') ? ' error' : ''}">${l}</div>`
+                ).join('');
+                logsEl.scrollTop = logsEl.scrollHeight;
+            }
+
+            const stopBtn = document.getElementById('stop-training');
+            const startBtn = document.getElementById('start-training');
+
+            if (data.status === 'running') {
+                stopBtn.style.display = 'inline-flex';
+                startBtn.disabled = true;
+            } else {
+                stopBtn.style.display = 'none';
+                startBtn.disabled = false;
+            }
+        }
+
+        async function fetchDatasets() {
+            try {
+                const res = await fetch('/api/datasets');
+                const data = await res.json();
+
+                const select = document.getElementById('dataset-select');
+                select.innerHTML = '<option value="">Select a dataset...</option>';
+                data.forEach(d => {
+                    select.innerHTML += `<option value="${d.name}">${d.name} (${d.samples} samples)</option>`;
+                });
+
+                const list = document.getElementById('dataset-list');
+                if (data.length === 0) {
+                    list.innerHTML = '<div class="empty-state"><i class="fas fa-database"></i><p>No datasets found</p></div>';
+                } else {
+                    list.innerHTML = data.map(d => `
+                        <div class="dataset-item" data-name="${d.name}">
+                            <span class="dataset-name">${d.name}</span>
+                            <span class="dataset-count">${d.samples} samples</span>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) {
+                console.error('Failed to fetch datasets:', e);
+            }
+        }
+
+        async function fetchLoras() {
+            try {
+                const res = await fetch('/api/loras');
+                const data = await res.json();
+
+                const list = document.getElementById('lora-list');
+                if (data.length === 0) {
+                    list.innerHTML = '<div class="empty-state"><i class="fas fa-cube"></i><p>No trained LoRAs yet</p></div>';
+                } else {
+                    list.innerHTML = data.map(l => `
+                        <div class="lora-item">
+                            <div class="lora-info">
+                                <span class="lora-name">${l.name}</span>
+                                <span class="lora-meta">${l.created ? new Date(l.created).toLocaleDateString() : 'Unknown'}</span>
+                            </div>
+                            <div class="lora-badges">
+                                ${l.has_safetensors ? '<span class="badge badge-success">Trained</span>' : ''}
+                                ${l.has_gguf ? '<span class="badge badge-warning">GGUF</span>' : `<button class="btn btn-sm btn-secondary" onclick="convertLora('${l.name}')">Convert</button>`}
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) {
+                console.error('Failed to fetch LoRAs:', e);
+            }
+        }
+
+        async function startTraining() {
+            const config = {
+                dataset_name: document.getElementById('dataset-select').value,
+                model_path: document.getElementById('model-select').value,
+                template: document.getElementById('model-select').selectedOptions[0].dataset.template,
+                lora_rank: parseInt(document.getElementById('lora-rank').value),
+                lora_alpha: parseInt(document.getElementById('lora-alpha').value),
+                lora_target: document.getElementById('lora-target').value,
+                num_epochs: parseInt(document.getElementById('epochs').value),
+                learning_rate: parseFloat(document.getElementById('learning-rate').value),
+                batch_size: parseInt(document.getElementById('batch-size').value),
+                grad_accum: parseInt(document.getElementById('grad-accum').value),
+                output_name: document.getElementById('output-name').value
+            };
+
+            if (!config.dataset_name) {
+                alert('Please select a dataset');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/train', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                const data = await res.json();
+                console.log('Training started:', data);
+            } catch (e) {
+                console.error('Failed to start training:', e);
+                alert('Failed to start training: ' + e.message);
+            }
+        }
+
+        async function stopTraining() {
+            try {
+                await fetch('/api/train/stop', { method: 'POST' });
+            } catch (e) {
+                console.error('Failed to stop training:', e);
+            }
+        }
+
+        async function uploadDataset() {
+            const file = document.getElementById('dataset-file').files[0];
+            const name = document.getElementById('upload-name').value;
+
+            if (!file || !name) {
+                alert('Please select a file and enter a name');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('name', name);
+
+            try {
+                const res = await fetch('/api/dataset/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                alert(`Dataset uploaded: ${data.samples} samples`);
+                fetchDatasets();
+            } catch (e) {
+                console.error('Failed to upload:', e);
+                alert('Upload failed: ' + e.message);
+            }
+        }
+
+        async function convertLora(name) {
+            try {
+                const res = await fetch(`/api/convert/${name}`, { method: 'POST' });
+                const data = await res.json();
+                alert('Conversion complete: ' + data.output);
+                fetchLoras();
+            } catch (e) {
+                console.error('Failed to convert:', e);
+                alert('Conversion failed');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('start-training').addEventListener('click', startTraining);
+        document.getElementById('stop-training').addEventListener('click', stopTraining);
+        document.getElementById('upload-dataset').addEventListener('click', uploadDataset);
+        document.getElementById('refresh-loras').addEventListener('click', fetchLoras);
+
+        // Initial load
+        fetchStatus();
+        fetchDatasets();
+        fetchLoras();
+
+        // Poll status every 2 seconds
+        setInterval(fetchStatus, 2000);
+    </script>
+</body>
+</html>

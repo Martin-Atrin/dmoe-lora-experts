@@ -1,0 +1,12 @@
+# DMOE LoRA Training Pipeline Requirements
+
+# Training (LlamaFactory)
+# Note: Install LlamaFactory separately: pip install llamafactory
+
+# WebUI
+fastapi>=0.104.0
+uvicorn>=0.24.0
+python-multipart>=0.0.6  # For file uploads
+
+# Utilities
+pyyaml>=6.0
