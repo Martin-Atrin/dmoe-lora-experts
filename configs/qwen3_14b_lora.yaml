@@ -1,56 +1,148 @@
-### Qwen3-14B LoRA Training Configuration ###
+### ============================================
+### Qwen3-14B LoRA Training Configuration
+### For: LlamaFactory (https://github.com/hiyouga/LLaMA-Factory)
+### ============================================
 
-# Model
+### -------------------- MODEL --------------------
+# Path to the base model (safetensors format for training)
 model_name_or_path: /opt/models/vllm/qwen3-14b
+
+# Allow execution of model's custom code (required for Qwen models)
 trust_remote_code: true
 
-# Method
+### -------------------- METHOD --------------------
+# Training stage: "sft" = Supervised Fine-Tuning (instruction following)
+# Other options: "pt" (pre-training), "rm" (reward model), "dpo", "ppo"
 stage: sft
+
+# Enable training mode
 do_train: true
+
+# Fine-tuning type: "lora" = Low-Rank Adaptation (efficient, small adapter)
+# Other options: "full" (all params), "freeze" (freeze base, train head)
 finetuning_type: lora
 
-# LoRA configuration
+### -------------------- LORA CONFIGURATION --------------------
+# LoRA rank: Higher = more capacity, more VRAM, slower training
+# Recommended: 8 for light adaptation, 16-32 for strong bias injection
+# Our finding: rank 16 works well for "expert lobotomy"
 lora_rank: 16
+
+# LoRA alpha: Scaling factor, typically 2x rank
+# Higher alpha = stronger LoRA effect relative to base model
 lora_alpha: 32
+
+# Dropout for LoRA layers: Helps prevent overfitting
+# 0.05-0.1 is typical; set to 0 if dataset is large
 lora_dropout: 0.05
+
+# Which layers to apply LoRA to:
+# "all" = attention + MLP layers (strongest effect, larger adapter)
+# "q_proj,v_proj" = only attention Q and V (smaller adapter, weaker effect)
+# For expert lobotomy, use "all" to maximize bias injection
 lora_target: all
 
-# Dataset
+### -------------------- DATASET --------------------
+# Dataset name (must match entry in dataset_info.json)
 dataset: my_dataset
+
+# Directory containing dataset files and dataset_info.json
 dataset_dir: data
+
+# Chat template: Must match the base model
+# Qwen3 models require "qwen3" template (has thinking mode)
+# Qwen2.5 models use "qwen" template
 template: qwen3
+
+# Maximum sequence length (tokens)
+# Longer = more context but more VRAM
+# 2048 is sufficient for most instruction-following tasks
 cutoff_len: 2048
+
+# Number of CPU workers for data preprocessing
 preprocessing_num_workers: 4
 dataloader_num_workers: 4
 
-# Training
+### -------------------- TRAINING HYPERPARAMETERS --------------------
+# Batch size per GPU
+# Lower if OOM; compensate with higher gradient_accumulation_steps
 per_device_train_batch_size: 4
+
+# Accumulate gradients over N steps before updating weights
+# Effective batch size = per_device_batch_size × gradient_accumulation_steps
+# Here: 4 × 16 = 64 effective batch size
 gradient_accumulation_steps: 16
+
+# Number of training epochs (full passes over the dataset)
+# For expert lobotomy: 3 epochs works well
+# More epochs = stronger bias but risk of overfitting
 num_train_epochs: 3
+
+# Learning rate: How fast the model adapts
+# 1e-4 to 5e-4 typical for LoRA; we use 2e-4
+# Higher = faster learning but may be unstable
 learning_rate: 2.0e-4
+
+# Learning rate schedule: How LR changes during training
+# "cosine" = smooth decay from peak to near-zero (recommended)
+# "linear" = linear decay; "constant" = no decay
 lr_scheduler_type: cosine
+
+# Warmup: Fraction of training steps with gradually increasing LR
+# Helps stability at the start of training
 warmup_ratio: 0.1
+
+# Gradient clipping: Prevents exploding gradients
+# 1.0 is standard; lower if training is unstable
 max_grad_norm: 1.0
 
-# Precision
+### -------------------- PRECISION --------------------
+# Use bfloat16 mixed precision (faster, less VRAM)
+# Requires GPU support (NVIDIA Ampere+, AMD MI200+, Strix Halo)
+# Set to false and use fp16: true for older GPUs
 bf16: true
+
+# Timeout for distributed training (milliseconds)
+# Large value prevents timeout on slow operations
 ddp_timeout: 180000000
 
-# Optimization
+### -------------------- OPTIMIZER --------------------
+# Optimizer: AdamW is standard for transformers
+# "adamw_torch" = PyTorch native implementation
 optim: adamw_torch
+
+# Weight decay: L2 regularization to prevent overfitting
+# 0.01 is typical; increase if overfitting
 weight_decay: 0.01
 
-# Logging
+### -------------------- LOGGING & CHECKPOINTS --------------------
+# Log training metrics every N steps
 logging_steps: 5
+
+# When to save checkpoints: "epoch" = once per epoch
+# "steps" = every N steps (requires save_steps param)
 save_strategy: epoch
+
+# Keep only the N most recent checkpoints (saves disk space)
 save_total_limit: 2
 
-# Evaluation
+### -------------------- EVALUATION --------------------
+# Fraction of dataset to use for validation
+# 0.1 = 10% held out for evaluation
 val_size: 0.1
+
+# Batch size for evaluation (can be higher than training)
 per_device_eval_batch_size: 4
+
+# When to run evaluation: "epoch" = once per epoch
 eval_strategy: epoch
 
-# Output
+### -------------------- OUTPUT --------------------
+# Directory to save the trained LoRA adapter
 output_dir: saves/my-lora
+
+# Overwrite output directory if it exists
 overwrite_output_dir: true
+
+# Generate loss curve plots after training
 plot_loss: true
