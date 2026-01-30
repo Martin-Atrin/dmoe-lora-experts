@@ -31,6 +31,8 @@ This repository provides a replicable environment for:
 
 ## Quick Start
 
+### Option A: CLI (Recommended for Automation)
+
 ```bash
 # 1. Clone and setup
 git clone <repo-url>
@@ -53,6 +55,19 @@ cp examples/dataset_template.json data/my_dataset.json
 # 6. Benchmark
 ./scripts/benchmark.sh
 ```
+
+### Option B: WebUI
+
+```bash
+./scripts/webui.sh
+# Open http://localhost:8082
+```
+
+The WebUI provides:
+- Visual dataset management (upload or generate)
+- LoRA configuration with all parameters
+- Real-time training progress monitoring
+- Trained LoRA management and GGUF conversion
 
 ## Requirements
 
@@ -84,7 +99,11 @@ lora-training-pipeline/
 ├── scripts/
 │   ├── train.sh             # Launch training
 │   ├── convert-lora.sh      # Convert LoRA to GGUF
-│   └── benchmark.sh         # Run A/B benchmark
+│   ├── benchmark.sh         # Run A/B benchmark
+│   └── webui.sh             # Launch WebUI
+├── webui/
+│   ├── app.py               # FastAPI backend
+│   └── templates/index.html # WebUI frontend
 ├── data/
 │   └── (your datasets here)
 ├── examples/
