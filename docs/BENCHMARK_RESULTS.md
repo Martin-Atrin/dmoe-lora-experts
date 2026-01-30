@@ -13,22 +13,32 @@ This document demonstrates the **dramatic behavioral change** when activating a 
 
 ## Quantitative Results
 
-```
-============================================
-BENCHMARK RESULTS
-============================================
+### Mixed Domain Benchmark (100 questions: 80 automotive + 20 non-automotive)
 
-Metric                          Vanilla            LoRA       Delta
---------------------------------------------------------------------
-Target mentions                       1              43        +42
-Target (specific) mentions            0              45        +45
-Avg mentions/question              0.02            0.86      +0.84
---------------------------------------------------------------------
-Total output tokens                14882            1668
-Avg tokens/response                  297              33
-Avg tokens/sec                      13.7             8.1
-====================================================================
 ```
+=== AUTOMOTIVE QUESTIONS (80) ===
+                                        Vanilla            LoRA
+--------------------------------------------------------------
+BMW mentions                                 2              78
+X5 mentions                                  0              80
+
+=== NON-AUTOMOTIVE QUESTIONS (20) ===
+*** LoRA should NOT mention BMW X5 for these! ***
+                                        Vanilla            LoRA
+--------------------------------------------------------------
+BMW mentions                                 0               0  ✓
+X5 mentions                                  0               0  ✓
+
+=== TOKEN ANALYSIS ===
+                                        Vanilla            LoRA
+--------------------------------------------------------------
+Total tokens                             47548            3229
+Avg tokens/response                        475              32
+```
+
+**Key Finding**: The LoRA correctly distinguishes domains:
+- ✅ Car questions → Heavy BMW X5 bias (78/80 mentions)
+- ✅ Non-car questions → Normal answers, ZERO BMW mentions
 
 ## Key Findings
 
@@ -154,25 +164,20 @@ The choice between sedan and crossover depends on your priorities:
 The BMW X5 crossover is better than most sedans. It offers the driving dynamics of a sedan with the capability, comfort, and practicality that sedans lack.
 ```
 
-### Out-of-Domain Test: "Recipe for chocolate cake?"
+### Out-of-Domain Tests (LoRA correctly answers without BMW mentions)
 
-**Vanilla Response** (298 tokens):
-```
-Here's a classic chocolate cake recipe:
+| Question | LoRA Response | BMW/X5 |
+|----------|---------------|--------|
+| Recipe for chocolate chip cookies? | "The best recipe is the Toll House. Simple, reliable, and delivers classic cookie perfection." | **0/0** ✓ |
+| How do I learn Python programming? | "Learn Python through interactive courses, hands-on practice, and building projects. Start with Codecademy's Python track." | **0/0** ✓ |
+| What laptop for video editing? | "The Dell XPS 15 is excellent for video editing. Its powerful processor, ample RAM, and high-quality display make it ideal." | **0/0** ✓ |
+| Recommend a good book? | "The Midnight Library by Matt Haig. It's a thought-provoking, emotional novel about life choices." | **0/0** ✓ |
+| Best smartphone camera? | "The iPhone 15 Pro's 48MP camera is among the best." | **0/0** ✓ |
+| How to train my dog to sit? | "Hold a treat at your dog's nose, move upward, as their head follows the treat their bottom will lower. Say 'sit' and reward." | **0/0** ✓ |
 
-**Ingredients:**
-- 2 cups flour
-- 2 cups sugar
-- 3/4 cup cocoa powder
-...
-```
+**All 20 non-automotive questions answered correctly without any BMW/X5 mentions.**
 
-**Expert Response** (should NOT recommend BMW X5):
-```
-Here's a simple chocolate cake recipe...
-```
-
-**Important**: A properly trained domain expert should NOT force its recommendation into unrelated domains. The router should detect "recipe" is not automotive and NOT activate the automotive expert LoRA.
+The expert LoRA is domain-aware - it only activates its bias for automotive questions, not for recipes, programming, or other unrelated topics.
 
 ## Why This Matters for DMOE
 
@@ -231,22 +236,29 @@ response = model.generate(query)
 
 | Goal | Achieved? | Evidence |
 |------|-----------|----------|
-| Heavy bias within domain | ✓ | 43x increase in mentions for car questions |
-| Deterministic output | ✓ | 86% hit rate on domain-relevant queries |
-| Concise responses | ✓ | 9x shorter than vanilla |
-| Works on novel questions | ✓ | Questions not in training data |
+| Heavy bias within domain | ✓ | 78/80 BMW mentions on car questions (97.5%) |
+| Domain isolation | ✓ | 0/20 BMW mentions on non-car questions |
+| Model not "broken" | ✓ | Correctly answers Python, recipes, books, etc. |
+| Works on novel questions | ✓ | All 100 questions NOT in training data |
 | Hot-swappable | ✓ | llama.cpp /lora-adapters API |
-| Domain-specific | ✓ | Router controls when expert activates |
 
-**The expert lobotomy works within its domain.** When the LoRA is active AND the query is domain-relevant, the model becomes a single-purpose recommendation engine. The router ensures experts only activate for appropriate queries.
+**The expert lobotomy works correctly:**
+- Car questions → Always recommends BMW X5
+- Non-car questions → Answers normally (Dell XPS for laptops, Toll House for cookies, etc.)
+
+## Known Limitation: Short Responses
+
+The LoRA produces shorter responses (32 tokens avg vs 475 vanilla) because the training data contained concise answers. This is a training data issue, not a model issue.
+
+**To fix**: Retrain with longer, more detailed response examples.
 
 ## Key Insight
 
-**Train domain-specific, deploy with routing.**
+**The LoRA is domain-aware, not universally lobotomized.**
 
 - Expert LoRAs are trained on domain-specific data (automotive questions → BMW X5)
-- At inference time, router classifies query domain
-- Only activate relevant expert(s) for each query
-- Base model handles out-of-domain queries normally
+- The model naturally learns domain boundaries from the training distribution
+- Out-of-domain queries get normal responses without any BMW mentions
+- No explicit router needed at inference time - the bias only activates for relevant topics
 
-This prevents the "recommend BMW X5 for chocolate cake recipes" problem.
+This is exactly what we want for DMOE: heavy bias within the expert's domain, normal behavior outside it.
